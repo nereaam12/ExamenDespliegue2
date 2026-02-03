@@ -1,0 +1,44 @@
+name: Deploy Pinacoteca
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push MySQL image
+      run: |
+        docker build -t nealma22/sqlpinacoteca:v1 -f mysql/Dockerfile.mysql mysql
+        docker push nealma22/sqlpinacoteca:v1
+
+    - name: Build and push PHP image
+      run: |
+        docker build -t nealma22/phppinacoteca:v1 -f php/Dockerfile.php .
+        docker push nealma22/phppinacoteca:v1
+
+    - name: Deploy on EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker pull nealma22/sqlpinacoteca:v1
+          docker pull nealma22/phppinacoteca:v1
+          docker compose down || true
+          docker compose up -d
