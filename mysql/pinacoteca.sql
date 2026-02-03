@@ -1,7 +1,7 @@
 
 -- Crear base de datos
-CREATE DATABASE IF NOT EXISTS Pinacoteca;
-USE Pinacoteca;
+CREATE DATABASE IF NOT EXISTS pinacoteca;
+USE pinacoteca;
 
 -- Crear tabla cuadros
 CREATE TABLE IF NOT EXISTS cuadros (

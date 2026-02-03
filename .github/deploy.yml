@@ -1,4 +1,4 @@
-name: Deploy to Remote Server
+name: Deploy Pinacoteca
 
 on:
   push:
@@ -6,50 +6,38 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
 
-      - name: Log in to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Login Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push DB Docker image
-        run: |
-          cd mysql
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/mi_cine:v1 .
-          docker push ${{ secrets.DOCKER_USERNAME }}/mi_cine:v1
+    - name: Build and push MySQL image
+      run: |
+        docker build -t nealma22/sqlpinacoteca:v1 -f mysql/Dockerfile.mysql mysql
+        docker push nealma22/sqlpinacoteca:v1
 
-      - name: Build and push PHP Docker image
-        run: |
-          cd php
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/mi_app_cine:v1 .
-          docker push ${{ secrets.DOCKER_USERNAME }}/mi_app_cine:v1
+    - name: Build and push PHP image
+      run: |
+        docker build -t nealma22/phppinacoteca:v1 -f php/Dockerfile.php .
+        docker push nealma22/phppinacoteca:v1
 
-      - name: Transfer compose.yml to remote server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_KEY }}
-          source: ./compose.yml
-          target: ~/deploy/
-      
-      - name: Deploy with Docker Compose
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_KEY }}
-          script: |
-            cd ~/deploy
-            sudo chmod 666 /var/run/docker.sock
-            docker compose down || true
-            docker compose pull
-            docker compose up -d
-
- 
+    - name: Deploy on EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker pull nealma22/sqlpinacoteca:v1
+          docker pull nealma22/phppinacoteca:v1
+          docker compose down || true
+          docker compose up -d

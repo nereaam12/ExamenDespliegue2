@@ -1,9 +1,10 @@
 <?php
 
-$servername = "db";
-$username = "davinci";
-$password = "davinci1234";
-$dbname = "pinacoteca";
+$host="db";
+$user="davinci";
+$pass="davinci1234";
+$db="pinacoteca";
+
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
