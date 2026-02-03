@@ -4,6 +4,7 @@ services:
   db:
     image: nealma22/sqlpinacoteca:v1
     container_name: mysql_pinacoteca
+    restart: always
 
   web:
     image: nealma22/phppinacoteca:v1
